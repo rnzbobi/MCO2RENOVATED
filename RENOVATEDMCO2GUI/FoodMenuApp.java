@@ -274,6 +274,7 @@ public class FoodMenuApp extends JFrame{
                         stringBuilder.append("Thank you for Purchasing!");
                         String receipt = stringBuilder.toString();
                         
+                        vendingMachine.updateSales(selectedItemName);
                         vendingMachine.removeIngredient(selectedItemName);
                         vendingMachine.updateCurrentInventory();
                         JOptionPane.showMessageDialog(null,receipt,"RECEIPT", JOptionPane.INFORMATION_MESSAGE);

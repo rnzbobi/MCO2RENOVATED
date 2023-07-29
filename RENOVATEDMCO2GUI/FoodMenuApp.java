@@ -282,6 +282,8 @@ public class FoodMenuApp extends JFrame{
                     else{
                         showErrorMessage("Insufficient Change", "Error");
                     }
+                }else if(selectedItem.getQuantity() == 0){
+                    showErrorMessage("Item is SOLD OUT!", "Error");
                 } else {
                     showErrorMessage("Please select a valid predefined item.", "Error");
                 }

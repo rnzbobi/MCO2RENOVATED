@@ -53,6 +53,8 @@ class FoodItem {
 }
 
 public class FoodMenuApp extends JFrame{
+    private VendingMachineFactory vendingMachineFactory;
+    private RegularVendingMachine vendingMachine;
     private ArrayList<FoodItem> foodItems;
     private JPanel innerPanel;
     private JScrollPane scrollPane;
@@ -108,6 +110,10 @@ public class FoodMenuApp extends JFrame{
             }
         } while (maxItems <= 10);
 
+        vendingMachineFactory = new VendingMachineFactory();
+        vendingMachine = vendingMachineFactory.createRegularVendingMachine(machineName, maxItems);
+        System.out.println(vendingMachine.getName());
+        System.out.println(vendingMachine.getNumberOfSlots());
         currentSlots = 0;
         addPredefinedIngredients();
 
@@ -136,6 +142,13 @@ public class FoodMenuApp extends JFrame{
             @Override
             public void actionPerformed(ActionEvent e) {
                 showAddFoodItemDialog();
+                for(int i = 0; i < vendingMachine.getSlots().size(); i++){
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getName());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getCalories());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getPrice());
+            System.out.println(vendingMachine.countIngredient(vendingMachine.getSlots().get(i).get(0).getName()));
+            System.out.println("");
+        }
             }
         });
 
@@ -154,7 +167,8 @@ public class FoodMenuApp extends JFrame{
         printSummaryButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Implement the logic to print the summary here
+                JOptionPane.showMessageDialog(null,vendingMachine.createSummary(),"Show Summary", JOptionPane.INFORMATION_MESSAGE);
+                vendingMachine.updateStartingInventory();
             }
         });
 
@@ -165,6 +179,13 @@ public class FoodMenuApp extends JFrame{
             public void actionPerformed(ActionEvent e) {
                 // Implement the logic to set an item here
                 showSetPriceDialog();
+                for(int i = 0; i < vendingMachine.getSlots().size(); i++){
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getName());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getCalories());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getPrice());
+            System.out.println(vendingMachine.countIngredient(vendingMachine.getSlots().get(i).get(0).getName()));
+            System.out.println("");
+        }
             }
         });
 
@@ -207,7 +228,17 @@ public class FoodMenuApp extends JFrame{
                 } else {
                     showErrorMessage("Please select a valid predefined item.", "Error");
                 }
+
+                for(int i = 0; i < vendingMachine.getSlots().size(); i++){
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getName());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getCalories());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getPrice());
+            System.out.println(vendingMachine.countIngredient(vendingMachine.getSlots().get(i).get(0).getName()));
+            System.out.println("");
+        }
             }
+
+            
         });
         buttonPanel.add(addQuantityButton);
 
@@ -216,9 +247,43 @@ public class FoodMenuApp extends JFrame{
         submitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Handle the submit action (show receipt, etc.) here
-                // For now, let's just exit the application
-                System.exit(0);
+                String selectedItemName = selectItemField.getText();
+                FoodItem selectedItem = findPredefinedItem(selectedItemName);
+                StringBuilder stringBuilder = new StringBuilder();
+                if (selectedItem != null) {
+                    Change change = vendingMachine.dispenseChange(Integer.parseInt(selectedItem.getPrice()),vendingMachine.getCurrentUserBalance());
+                    int count = 0;
+                    if(change != null){
+                        stringBuilder.append("+-----------------------+\n");
+                        stringBuilder.append("|       Receipt   |\n");
+                        stringBuilder.append("+-----------------------+\n");
+                        stringBuilder.append("[1] " + selectedItem.getName() + "\n");
+                        stringBuilder.append("+-----------------------+\n");
+                        stringBuilder.append("Total: " + selectedItem.getPrice() + "\n");
+                        stringBuilder.append("Amount Paid: " + vendingMachine.getCurrentUserBalance() + "\n");
+                        stringBuilder.append("Change: " + (vendingMachine.getCurrentUserBalance() - Integer.parseInt(selectedItem.getPrice())) + "\n");
+                        for(int i = 0; i < change.getDenominations().size(); i++){
+                            count = 0;
+                            stringBuilder.append(change.getDenominations().get(i).get(0).getValue());
+                            for(int j = 0; j < change.getDenominations().get(i).size(); j++){
+                                count++;
+                            }
+                            stringBuilder.append(count + "\n");
+                        }
+                        stringBuilder.append("+-----------------------+\n");
+                        stringBuilder.append("Thank you for Purchasing!");
+                        String receipt = stringBuilder.toString();
+                        
+                        vendingMachine.removeIngredient(selectedItemName);
+                        vendingMachine.updateCurrentInventory();
+                        JOptionPane.showMessageDialog(null,receipt,"RECEIPT", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    else{
+                        showErrorMessage("Insufficient Change", "Error");
+                    }
+                } else {
+                    showErrorMessage("Please select a valid predefined item.", "Error");
+                }
             }
         });
         buttonPanel.add(submitButton);
@@ -246,6 +311,15 @@ public class FoodMenuApp extends JFrame{
         buttonPanel.add(replenishButton);
         buttonPanel.add(exitButton);
         showFundsInsertionDialog();
+
+        for(int i = 0; i < vendingMachine.getDenominations().size(); i++){
+            for(int j = 0; j < vendingMachine.getDenominations().get(i).size(); j++){
+                System.out.println(vendingMachine.getDenominations().get(i).get(j).getValue());
+                System.out.println("");
+            }
+        }
+
+        System.out.println(vendingMachine.getCurrentBalance());
 
         frame.add(scrollPane, BorderLayout.CENTER);
         frame.add(buttonPanel, BorderLayout.SOUTH);
@@ -307,6 +381,8 @@ public class FoodMenuApp extends JFrame{
                 String amountStr = moneyField.getText();
                 if (isValidPositiveInteger(amountStr)) {
                     int amount = Integer.parseInt(amountStr);
+                    vendingMachine.addDenomination(Integer.parseInt(amountStr));
+                    vendingMachine.updateCurrentBalance();
                     ownerBalance += amount; // Transfer funds to owner's balance
                     moneyField.setText("");
                     balanceToTransferField.setText("Balance to Transfer: 0"); // Reset the field
@@ -424,6 +500,14 @@ public class FoodMenuApp extends JFrame{
                 System.exit(0);
             }
         }
+
+        for(int i = 0; i < vendingMachine.getSlots().size(); i++){
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getName());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getCalories());
+            System.out.println(vendingMachine.getSlots().get(i).get(0).getPrice());
+            System.out.println(vendingMachine.countIngredient(vendingMachine.getSlots().get(i).get(0).getName()));
+            System.out.println("");
+        }
     }
 
     private void showSetPriceDialog() {
@@ -443,6 +527,7 @@ public class FoodMenuApp extends JFrame{
         FoodItem selectedItem = findPredefinedItem(ingredientName);
         if (selectedItem != null) {
             // Update the price of the ingredient
+            vendingMachine.setPrice(ingredientName, Integer.parseInt(newPriceStr));
             selectedItem.setPrice(newPriceStr);
     
             // Update the display of the ingredient's information
@@ -459,6 +544,7 @@ public class FoodMenuApp extends JFrame{
         if (quantityStr != null && isValidPositiveInteger(quantityStr)) {
             int quantityToAdd = Integer.parseInt(quantityStr);
             item.setQuantity(item.getQuantity() + quantityToAdd);
+            vendingMachine.addQuantity(item.getName(), quantityToAdd);
             updateQuantityDisplay(item);
         }
         // Clear the text field
@@ -496,7 +582,9 @@ public class FoodMenuApp extends JFrame{
             predefinedItem.setQuantity(quantity);
 
             if (predefinedItem.getQuantity() >= 10) {
-                //ADD INGREDIENT HERE
+                vendingMachine.addIngredient(predefinedItem.getName(), Integer.parseInt(predefinedItem.getCalorie()), Integer.parseInt(predefinedItem.getPrice()), quantity);
+                vendingMachine.updateStartingInventory();
+                vendingMachine.updateCurrentInventory();
                 addFoodItem(predefinedItem.getImagePath(), predefinedItem.getCalorie(), predefinedItem.getName(), predefinedItem.getPrice(), quantity);
                 innerPanel.revalidate();
             } else {
@@ -542,7 +630,8 @@ public class FoodMenuApp extends JFrame{
         int price = Integer.parseInt(priceStr);
         int quantity = Integer.parseInt(quantityStr);
 
-        //ADDINGREDIENT
+        vendingMachine.addIngredient(name, calorie, price, quantity);
+        vendingMachine.updateCurrentInventory();
         addFoodItem(imagePath, String.valueOf(calorie), name, String.valueOf(price), quantity);
         innerPanel.revalidate();
     }
